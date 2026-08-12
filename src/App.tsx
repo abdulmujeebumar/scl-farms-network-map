@@ -287,9 +287,20 @@ function AppLayout() {
           {/* ---- Location detail (when selected) ---- */}
           {selectedLocation && (
             <div className="location-detail">
-              <h4 className="location-detail__name">
-                {selectedLocation.name}
-              </h4>
+              {editMode ? (
+                <input
+                  className="location-detail__name-input"
+                  value={selectedLocation.name}
+                  onChange={(e) =>
+                    dispatch({
+                      type: 'UPDATE_LOCATION',
+                      payload: { ...selectedLocation, name: e.target.value },
+                    })
+                  }
+                />
+              ) : (
+                <h4 className="location-detail__name">{selectedLocation.name}</h4>
+              )}
               {selectedParent && (
                 <p className="location-detail__parent">
                   ↳ inside <strong>{selectedParent.name}</strong>
