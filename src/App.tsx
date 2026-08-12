@@ -7,16 +7,10 @@ import './App.css';
 
 const BUILD_TIME = new Date().toLocaleTimeString();
 
-/** SCL Farms logo — SVG */
+/** SCL Farms logo */
 function SCLLogo() {
   return (
-    <svg width="28" height="28" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
-      <circle cx="50" cy="50" r="48" fill="none" stroke="#22C55E" strokeWidth="4" />
-      <circle cx="50" cy="50" r="44" fill="none" stroke="#16A34A" strokeWidth="1.5" opacity="0.5" />
-      <ellipse cx="40" cy="38" rx="14" ry="22" fill="#22C55E" transform="rotate(-20 40 38)" opacity="0.85" />
-      <ellipse cx="62" cy="38" rx="14" ry="22" fill="#F97316" transform="rotate(20 62 38)" opacity="0.85" />
-      <line x1="50" y1="70" x2="50" y2="82" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" />
-    </svg>
+    <img src="/scl_logo.png" alt="SCL Farms" width="32" height="32" style={{ flexShrink: 0, borderRadius: 4 }} />
   );
 }
 
