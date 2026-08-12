@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { FarmMapProvider, useFarmMap } from './context/FarmMapContext';
 import { MapView } from './components/MapView';
 import { LAYER_COLORS, LAYER_LABELS, LINK_TYPE_LABELS, LINK_TYPE_COLORS } from './types';
@@ -6,6 +6,19 @@ import type { Layer, Equipment } from './types';
 import './App.css';
 
 const BUILD_TIME = new Date().toLocaleTimeString();
+
+/** SCL Farms logo — SVG */
+function SCLLogo() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+      <circle cx="50" cy="50" r="48" fill="none" stroke="#22C55E" strokeWidth="4" />
+      <circle cx="50" cy="50" r="44" fill="none" stroke="#16A34A" strokeWidth="1.5" opacity="0.5" />
+      <ellipse cx="40" cy="38" rx="14" ry="22" fill="#22C55E" transform="rotate(-20 40 38)" opacity="0.85" />
+      <ellipse cx="62" cy="38" rx="14" ry="22" fill="#F97316" transform="rotate(20 62 38)" opacity="0.85" />
+      <line x1="50" y1="70" x2="50" y2="82" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export default function App() {
   return (
@@ -129,12 +142,43 @@ function AppLayout() {
     ? locations.find((l) => l.id === selectedLocation.parentId) || null
     : null;
 
+  // ---- Export handlers ----
+  const handleExportPNG = useCallback(() => {
+    const svg = document.querySelector('.nc-svg') as SVGSVGElement;
+    if (!svg) return;
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    const rect = svg.getBoundingClientRect();
+    clone.setAttribute('width', String(rect.width));
+    clone.setAttribute('height', String(rect.height));
+    const data = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = rect.width * 2;
+      canvas.height = rect.height * 2;
+      const ctx = canvas.getContext('2d')!;
+      ctx.scale(2, 2);
+      ctx.fillStyle = '#F8F9FA';
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      ctx.drawImage(img, 0, 0);
+      const a = document.createElement('a');
+      a.download = 'scl-farms-network-map.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+  }, []);
+
+  const handleExportPDF = useCallback(() => {
+    window.print();
+  }, []);
+
   return (
     <div className="app">
       {/* ---- Header ---- */}
       <header className="app-header">
         <div className="app-brand">
-          <div className="app-brand-icon">🌾</div>
+          <SCLLogo />
           <div>
             <h1 className="app-title">SCL Farms — Network Remediation &amp; Enhancement</h1>
             <p className="app-subtitle">Kwali, Abuja · Existing Infrastructure | Verse IT Remediation | SCL Enhancement</p>
@@ -379,8 +423,16 @@ function AppLayout() {
         <span>Scroll to zoom · Drag to pan</span>
         <span>·</span>
         <span>{editMode ? 'Edit Mode: drag nodes to reposition' : 'Click a location for details'}</span>
-        <span>·</span>
-        <span>v5 · {BUILD_TIME}</span>
+        <span className="app-footer__spacer" />
+        <button className="app-footer__btn" onClick={handleExportPNG} title="Export as PNG image">
+          📷 Image
+        </button>
+        <button className="app-footer__btn" onClick={handleExportPDF} title="Export as PDF">
+          📄 PDF
+        </button>
+        <span className="app-footer__brand">
+          Powered by <strong>Koboweb Greentech Group</strong> · © KGTG 2026
+        </span>
       </footer>
     </div>
   );

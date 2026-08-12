@@ -484,3 +484,59 @@
   color: var(--color-text-muted);
   flex-shrink: 0;
 }
+
+.app-footer__spacer {
+  flex: 1;
+}
+
+.app-footer__btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 3px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-family);
+  color: var(--color-text-secondary);
+  transition: all var(--transition);
+}
+.app-footer__btn:hover {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+
+.app-footer__brand {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* ---- Print / PDF export ---- */
+@media print {
+  .app-header-actions,
+  .app-legend,
+  .app-footer__btn,
+  .nc-toolbar,
+  .edit-controls,
+  .location-detail__deselect,
+  .eq-delete-btn {
+    display: none !important;
+  }
+  .app-header {
+    border-bottom: 2px solid #000;
+    padding: 8px 20px;
+  }
+  .app-footer {
+    border-top: 2px solid #000;
+    font-size: 9px;
+  }
+  .app-body {
+    overflow: visible;
+  }
+  .nc-svg {
+    width: 100%;
+    height: auto;
+  }
+}
