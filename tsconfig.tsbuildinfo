@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/components/mapview.tsx","./src/components/networkcanvas.tsx","./src/context/farmmapcontext.tsx","./src/data/initialdata.ts","./vite-env.d.ts"],"version":"5.9.3"}
