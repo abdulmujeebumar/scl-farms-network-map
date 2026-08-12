@@ -3,9 +3,10 @@
 // Central state management with localStorage persistence
 // ============================================================
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useState, useRef } from 'react';
 import type { FarmMapData, Location, Equipment, Link, Layer } from '../types';
 import { initialData } from '../data/initialData';
+import { saveToCloud, loadFromCloud, subscribeToCloud } from '../firebase';
 
 // ============================================================
 // Actions
@@ -182,14 +183,42 @@ function persistState(state: FarmMapData): void {
 }
 
 export function FarmMapProvider({ children }: { children: React.ReactNode }) {
+  const [cloudReady, setCloudReady] = useState(false);
+  const isCloudUpdate = useRef(false);
+
   const [data, dispatch] = useReducer(reducer, null, () => {
     return loadPersistedState() || initialData;
   });
 
-  // Persist on every change
+  // Load from cloud on mount
+  useEffect(() => {
+    loadFromCloud().then((cloudData) => {
+      if (cloudData) {
+        isCloudUpdate.current = true;
+        dispatch({ type: 'SET_DATA', payload: cloudData });
+      }
+      setCloudReady(true);
+    });
+  }, []);
+
+  // Subscribe to real-time cloud updates
+  useEffect(() => {
+    if (!cloudReady) return;
+    const unsub = subscribeToCloud((cloudData) => {
+      isCloudUpdate.current = true;
+      dispatch({ type: 'SET_DATA', payload: cloudData });
+    });
+    return unsub;
+  }, [cloudReady]);
+
+  // Persist to localStorage + cloud on every change (skip cloud-originated updates)
   useEffect(() => {
     persistState(data);
-  }, [data]);
+    if (cloudReady && !isCloudUpdate.current) {
+      saveToCloud(data);
+    }
+    isCloudUpdate.current = false;
+  }, [data, cloudReady]);
 
   const selectedLocation = data.selectedLocationId
     ? data.locations.find((loc) => loc.id === data.selectedLocationId) || null
