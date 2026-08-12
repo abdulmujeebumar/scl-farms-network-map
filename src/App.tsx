@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { FarmMapProvider, useFarmMap } from './context/FarmMapContext';
 import { getStoredPassword, setStoredPassword } from './context/FarmMapContext';
 import { MapView } from './components/MapView';
@@ -199,6 +199,34 @@ function AppLayout() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginError, setLoginError] = useState('');
   const loginInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-lock after 2 minutes of inactivity
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    if (editMode && isAuthenticated) {
+      idleTimer.current = setTimeout(() => {
+        dispatch({ type: 'SET_AUTH', payload: false });
+      }, 2 * 60 * 1000); // 2 minutes
+    }
+  }, [editMode, isAuthenticated, dispatch]);
+
+  useEffect(() => {
+    resetIdleTimer();
+    return () => { if (idleTimer.current) clearTimeout(idleTimer.current); };
+  }, [editMode, isAuthenticated, resetIdleTimer]);
+
+  useEffect(() => {
+    if (!editMode) return;
+    window.addEventListener('mousemove', resetIdleTimer);
+    window.addEventListener('keydown', resetIdleTimer);
+    window.addEventListener('click', resetIdleTimer);
+    return () => {
+      window.removeEventListener('mousemove', resetIdleTimer);
+      window.removeEventListener('keydown', resetIdleTimer);
+      window.removeEventListener('click', resetIdleTimer);
+    };
+  }, [editMode, resetIdleTimer]);
 
   const handleLogin = useCallback(() => {
     const pw = loginInputRef.current?.value || '';
