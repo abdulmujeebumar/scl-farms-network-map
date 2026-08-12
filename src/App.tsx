@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { FarmMapProvider, useFarmMap } from './context/FarmMapContext';
+import { getStoredPassword, setStoredPassword } from './context/FarmMapContext';
 import { MapView } from './components/MapView';
 import { LAYER_COLORS, LAYER_LABELS, LINK_TYPE_LABELS, LINK_TYPE_COLORS } from './types';
 import type { Layer, Equipment } from './types';
@@ -230,10 +231,10 @@ function AppLayout() {
                 const wantEdit = e.target.checked;
                 if (wantEdit && !isAuthenticated) {
                   const pw = prompt('🔒 Enter admin password to enable Edit Mode:');
-                  if (pw === 'scladmin2026') {
+                  if (pw === getStoredPassword()) {
                     dispatch({ type: 'SET_AUTH', payload: true });
                     dispatch({ type: 'SET_EDIT_MODE', payload: true });
-                  } else {
+                  } else if (pw !== null) {
                     alert('Incorrect password.');
                   }
                 } else if (!wantEdit) {
@@ -246,16 +247,35 @@ function AppLayout() {
             <span>{editMode ? '✎ EDIT MODE ON' : isAuthenticated ? '✎ Edit Mode' : '🔒 Edit Mode'}</span>
           </label>
           {isAuthenticated && (
-            <button
-              className="edit-toggle"
-              style={{ border: 'none', background: 'transparent', fontSize: 11, cursor: 'pointer', color: 'var(--color-text-muted)' }}
-              onClick={() => {
-                dispatch({ type: 'SET_AUTH', payload: false });
-              }}
-              title="Lock edit mode"
-            >
-              🔓 Lock
-            </button>
+            <>
+              <button
+                className="edit-toggle"
+                style={{ border: 'none', background: 'transparent', fontSize: 11, cursor: 'pointer', color: 'var(--color-text-muted)' }}
+                onClick={() => {
+                  const oldPw = prompt('Enter current password:');
+                  if (oldPw !== getStoredPassword()) { alert('Incorrect.'); return; }
+                  const newPw = prompt('Enter new password:');
+                  if (!newPw) return;
+                  const confirmPw = prompt('Confirm new password:');
+                  if (newPw !== confirmPw) { alert('Passwords do not match.'); return; }
+                  setStoredPassword(newPw);
+                  alert('Password changed successfully.');
+                }}
+                title="Change admin password"
+              >
+                🔑
+              </button>
+              <button
+                className="edit-toggle"
+                style={{ border: 'none', background: 'transparent', fontSize: 11, cursor: 'pointer', color: 'var(--color-text-muted)' }}
+                onClick={() => {
+                  dispatch({ type: 'SET_AUTH', payload: false });
+                }}
+                title="Lock edit mode"
+              >
+                🔓 Lock
+              </button>
+            </>
           )}
         </div>
       </header>

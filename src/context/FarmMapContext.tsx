@@ -129,7 +129,23 @@ function reducer(state: FarmMapData, action: Action): FarmMapData {
 // Context
 // ============================================================
 
-const STORAGE_KEY = 'scl-farms-network-map-v6';
+const STORAGE_KEY = 'scl-farms-network-map-v7';
+const PASSWORD_KEY = 'scl-farms-admin-pw';
+const DEFAULT_PASSWORD = 'scladmin2026';
+
+export function getStoredPassword(): string {
+  try {
+    return localStorage.getItem(PASSWORD_KEY) || DEFAULT_PASSWORD;
+  } catch {
+    return DEFAULT_PASSWORD;
+  }
+}
+
+export function setStoredPassword(newPw: string): void {
+  try {
+    localStorage.setItem(PASSWORD_KEY, newPw);
+  } catch { /* ignore */ }
+}
 
 interface FarmMapContextValue {
   data: FarmMapData;
