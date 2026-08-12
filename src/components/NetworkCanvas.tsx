@@ -220,22 +220,15 @@ export function NetworkCanvas() {
     setViewBox({ x: 0, y: 0, w: GRID_W, h: GRID_H });
   }, []);
 
-  // ---- Filter visible ----
-  const parentMap = new Map(locations.filter((l) => !l.parentId).map((l) => [l.id, l]));
-  const visibleLocations = locations.filter((l) => {
-    const layer = getLocationLayer(l.id);
-    if (l.parentId) {
-      // Sub-location: visible if parent layer is visible
-      const parentLayer = getLocationLayer(l.parentId);
-      return layerVisibility[parentLayer];
-    }
-    return layerVisibility[layer];
-  });
-  const topLevelLocs = visibleLocations.filter((l) => !l.parentId);
+  // Top-level locations always visible; sub-locations filtered by parent selection
+  const topLevelLocs = locations.filter((l) => !l.parentId);
   // Active parent: if a sub-location is selected, use its parent; otherwise use selectedLocationId
   const selectedLoc = locations.find((l) => l.id === selectedLocationId);
   const activeParentId = selectedLoc?.parentId || selectedLocationId;
-  const subLocs = visibleLocations.filter((l) => l.parentId && l.parentId === activeParentId);
+  // Sub-locations: only visible when parent is active AND parent's layer is visible
+  const subLocs = locations.filter(
+    (l) => l.parentId && l.parentId === activeParentId && layerVisibility[getLocationLayer(l.parentId)]
+  );
 
   return (
     <div className="network-canvas" onContextMenu={(e) => e.preventDefault()}>
@@ -532,7 +525,7 @@ export function NetworkCanvas() {
           const isSelected = selectedLocationId === loc.id;
           const layer = getLocationLayer(loc.id);
           const color = LAYER_COLORS[layer];
-          const parent = loc.parentId ? parentMap.get(loc.parentId) : null;
+          const parent = loc.parentId ? locationMap.get(loc.parentId) : null;
 
           return (
             <g key={loc.id}>
