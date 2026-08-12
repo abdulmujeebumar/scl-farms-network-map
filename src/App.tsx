@@ -90,11 +90,12 @@ function CostSummary({
                       {editMode ? (
                         <input
                           className="cost-item__input"
-                          type="text"
+                          type="number"
+                          min="0"
                           placeholder="TBD"
-                          defaultValue={eq.unitCost ?? ''}
+                          value={eq.unitCost ?? ''}
                           onChange={(e) => {
-                            const v = e.target.value === '' ? undefined : Number(e.target.value);
+                            const v = e.target.value === '' ? undefined : Math.max(0, Number(e.target.value));
                             dispatch({
                               type: 'UPDATE_EQUIPMENT',
                               payload: { ...eq, unitCost: v && !isNaN(v) ? v : undefined },
