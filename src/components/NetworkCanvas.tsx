@@ -225,9 +225,9 @@ export function NetworkCanvas() {
   // Active parent: if a sub-location is selected, use its parent; otherwise use selectedLocationId
   const selectedLoc = locations.find((l) => l.id === selectedLocationId);
   const activeParentId = selectedLoc?.parentId || selectedLocationId;
-  // Sub-locations: only visible when parent is active AND parent's layer is visible
+  // Sub-locations: only visible when parent is active
   const subLocs = locations.filter(
-    (l) => l.parentId && l.parentId === activeParentId && layerVisibility[getLocationLayer(l.parentId)]
+    (l) => l.parentId && l.parentId === activeParentId
   );
 
   return (
