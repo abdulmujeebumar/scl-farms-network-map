@@ -259,18 +259,6 @@ export function NetworkCanvas() {
             )}
           </>
         )}
-        <label className="nc-edit-toggle">
-          <input
-            type="checkbox"
-            checked={editMode}
-            onChange={(e) =>
-              dispatch({ type: 'SET_EDIT_MODE', payload: e.target.checked })
-            }
-          />
-          <span className="nc-edit-label">
-            {editMode ? '✎ EDIT MODE ON' : '✎ Edit Mode'}
-          </span>
-        </label>
       </div>
 
       <svg
