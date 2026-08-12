@@ -248,6 +248,36 @@ export function NetworkCanvas() {
         {editMode && (
           <>
             <button
+              className="nc-btn"
+              onClick={() => {
+                const name = window.prompt('Location name:');
+                if (!name?.trim()) return;
+                const layers: Layer[] = ['existing', 'verse', 'scl', 'remove', 'future'];
+                const labels = ['Existing/Current', 'Verse IT', 'SCL Enhancement', 'Remove/Replace', 'Future/Optional'];
+                const choice = window.prompt(
+                  'Layer:\n1 = Existing/Current\n2 = Verse IT Remediation\n3 = SCL Enhancement\n4 = Remove/Replace\n5 = Future/Optional',
+                  '1'
+                );
+                const idx = choice ? parseInt(choice) - 1 : 0;
+                const layer = layers[idx] || 'existing';
+                const id = 'loc-' + Date.now().toString(36);
+                const cx = viewBox.x + viewBox.w / 2;
+                const cy = viewBox.y + viewBox.h / 2;
+                dispatch({
+                  type: 'ADD_LOCATION',
+                  payload: {
+                    id,
+                    name: name.trim(),
+                    x: Math.round(cx),
+                    y: Math.round(cy),
+                    description: `New ${labels[idx]} location.`,
+                  },
+                });
+              }}
+            >
+              ＋ Add Location
+            </button>
+            <button
               className={`nc-btn nc-btn--link ${linkMode ? 'nc-btn--active' : ''}`}
               onClick={() => {
                 if (linkMode) {
