@@ -567,6 +567,85 @@
   text-align: right;
 }
 
+/* ---- Login Modal ---- */
+
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.login-modal {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 320px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.login-modal h3 {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.login-modal p {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 14px;
+}
+
+.login-modal__input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  font-size: 14px;
+  font-family: var(--font-family);
+  margin-bottom: 6px;
+}
+.login-modal__input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.2);
+}
+
+.login-modal__error {
+  color: #DC2626;
+  font-size: 11px;
+  margin-bottom: 10px;
+}
+
+.login-modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.login-modal__btn {
+  padding: 6px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-family);
+}
+.login-modal__btn--primary {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+.login-modal__btn--primary:hover {
+  opacity: 0.9;
+}
+
 /* ---- Print / PDF export ---- */
 @media print {
   .app-header-actions,

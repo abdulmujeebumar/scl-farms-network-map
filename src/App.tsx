@@ -195,6 +195,23 @@ function AppLayout() {
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const resizing = useRef(false);
 
+  // Login modal state
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const loginInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogin = useCallback(() => {
+    const pw = loginInputRef.current?.value || '';
+    if (pw === getStoredPassword()) {
+      dispatch({ type: 'SET_AUTH', payload: true });
+      dispatch({ type: 'SET_EDIT_MODE', payload: true });
+      setLoginOpen(false);
+      setLoginError('');
+    } else {
+      setLoginError('Incorrect password.');
+    }
+  }, [dispatch]);
+
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     resizing.current = true;
@@ -230,13 +247,9 @@ function AppLayout() {
               onChange={(e) => {
                 const wantEdit = e.target.checked;
                 if (wantEdit && !isAuthenticated) {
-                  const pw = prompt('🔒 Enter admin password to enable Edit Mode:');
-                  if (pw === getStoredPassword()) {
-                    dispatch({ type: 'SET_AUTH', payload: true });
-                    dispatch({ type: 'SET_EDIT_MODE', payload: true });
-                  } else if (pw !== null) {
-                    alert('Incorrect password.');
-                  }
+                  e.preventDefault();
+                  setLoginOpen(true);
+                  setTimeout(() => loginInputRef.current?.focus(), 100);
                 } else if (!wantEdit) {
                   dispatch({ type: 'SET_EDIT_MODE', payload: false });
                 } else {
@@ -531,6 +544,32 @@ function AppLayout() {
           Powered by <strong>Koboweb Greentech Group</strong> · © KGTG 2026
         </span>
       </footer>
+
+      {/* ---- Login Modal ---- */}
+      {loginOpen && (
+        <div className="login-overlay" onClick={() => setLoginOpen(false)}>
+          <div className="login-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>🔒 Admin Authentication</h3>
+            <p>Enter password to enable Edit Mode.</p>
+            <input
+              ref={loginInputRef}
+              className="login-modal__input"
+              type="password"
+              placeholder="Password"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
+            />
+            {loginError && <p className="login-modal__error">{loginError}</p>}
+            <div className="login-modal__actions">
+              <button className="login-modal__btn login-modal__btn--primary" onClick={handleLogin}>
+                Unlock
+              </button>
+              <button className="login-modal__btn" onClick={() => { setLoginOpen(false); setLoginError(''); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
