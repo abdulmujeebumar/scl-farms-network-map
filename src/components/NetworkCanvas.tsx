@@ -144,7 +144,7 @@ export function NetworkCanvas() {
   const handleNodeMouseDown = useCallback(
     (e: React.MouseEvent, loc: Location) => {
       if (!editMode) return;
-      e.stopPropagation();
+      // Don't stopPropagation — it blocks onClick in some browsers
       const { gx, gy } = svgToGrid(e.clientX, e.clientY);
       setDragNodeId(loc.id);
       dragOffset.current = { dx: gx - loc.x, dy: gy - loc.y };
