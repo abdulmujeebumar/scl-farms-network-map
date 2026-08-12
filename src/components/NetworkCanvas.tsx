@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useFarmMap } from '../context/FarmMapContext';
-import { LAYER_COLORS, LAYER_LABELS } from '../types';
+import { LAYER_COLORS, LAYER_LABELS, getLocationColor } from '../types';
 import type { Location, Layer, Link } from '../types';
 import './NetworkCanvas.css';
 
@@ -466,8 +466,7 @@ export function NetworkCanvas() {
         {/* ---- Location Nodes — Top-level ---- */}
         {topLevelLocs.map((loc) => {
           const isSelected = selectedLocationId === loc.id;
-          const layer = getLocationLayer(loc.id);
-          const color = LAYER_COLORS[layer];
+          const color = getLocationColor(loc.id);
 
           return (
             <g
@@ -548,8 +547,7 @@ export function NetworkCanvas() {
         {/* ---- Location Nodes — Sub-locations (Cedarwood children) ---- */}
         {subLocs.map((loc) => {
           const isSelected = selectedLocationId === loc.id;
-          const layer = getLocationLayer(loc.id);
-          const color = LAYER_COLORS[layer];
+          const color = getLocationColor(loc.id);
           const parent = loc.parentId ? locationMap.get(loc.parentId) : null;
 
           return (

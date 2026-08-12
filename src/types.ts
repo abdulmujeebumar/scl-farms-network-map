@@ -112,5 +112,40 @@ export const LINK_TYPE_LABELS: Record<string, string> = {
 export const LINK_TYPE_COLORS: Record<string, string> = {
   fibre: '#3B82F6',
   ethernet: '#22C55E',
-  wireless: '#A855F7',
+  wireless: '#EAB308',
 };
+
+// ============================================================
+// Location node colors — distinct per location (not layer-based)
+// ============================================================
+
+export function getLocationColor(id: string): string {
+  switch (id) {
+    case 'cedarwood':
+      return '#DC2626'; // red
+    case 'admin':
+      return '#2563EB'; // blue
+    case 'factory':
+      return '#D97706'; // amber
+    case 'cow-shed':
+      return '#78716C'; // warm gray
+    case 'school-area':
+      return '#7C3AED'; // violet
+    case 'greenhouse':
+      return '#A855F7'; // purple
+    // Sub-locations — lighter shade of red (Cedarwood's children)
+    case 'supermarket':
+    case 'conference-hall':
+    case 'conference-room':
+    case 'kitchen':
+    case 'cafeteria':
+    case 'gazebos':
+    case 'server-room':
+    case 'ground-floor':
+    case 'first-floor':
+    case 'second-floor':
+      return '#EF4444'; // lighter red
+    default:
+      return '#6B7280'; // gray for new/unknown locations
+  }
+}
