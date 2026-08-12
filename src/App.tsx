@@ -34,7 +34,7 @@ function CostSummary({
   const [expanded, setExpanded] = useState(false);
 
   // Group by layer
-  const layerOrder: Layer[] = ['verse', 'scl', 'future'];
+  const layerOrder: Layer[] = ['scl'];
   const grouped: Record<string, Equipment[]> = {};
   equipment.forEach((eq) => {
     if (!grouped[eq.layer]) grouped[eq.layer] = [];

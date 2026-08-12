@@ -348,7 +348,8 @@ export function NetworkCanvas() {
           const to = locationMap.get(link.to);
           if (!from || !to) return null;
           if (!layerVisibility[link.layer]) return null;
-          if (!linkTypeVisibility[link.type]) return null;
+          // Link type filter only applies to non-existing links; existing links controlled by layer toggle alone
+          if (link.layer !== 'existing' && !linkTypeVisibility[link.type]) return null;
 
           // Hide links to/from sub-locations unless parent is active
           const fromLoc = locationMap.get(link.from);
