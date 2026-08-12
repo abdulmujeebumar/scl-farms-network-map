@@ -268,22 +268,24 @@ function AppLayout() {
         </div>
 
         <div className="app-header-actions">
-          <label className="edit-toggle">
+          <label
+            className="edit-toggle"
+            onClick={(e) => {
+              if (!isAuthenticated) {
+                e.preventDefault();
+                setLoginOpen(true);
+                setTimeout(() => loginInputRef.current?.focus(), 100);
+                return;
+              }
+              // Toggle edit mode
+              dispatch({ type: 'SET_EDIT_MODE', payload: !editMode });
+            }}
+          >
             <input
               type="checkbox"
               checked={editMode}
-              onChange={(e) => {
-                const wantEdit = e.target.checked;
-                if (wantEdit && !isAuthenticated) {
-                  e.preventDefault();
-                  setLoginOpen(true);
-                  setTimeout(() => loginInputRef.current?.focus(), 100);
-                } else if (!wantEdit) {
-                  dispatch({ type: 'SET_EDIT_MODE', payload: false });
-                } else {
-                  dispatch({ type: 'SET_EDIT_MODE', payload: wantEdit });
-                }
-              }}
+              readOnly
+              style={{ pointerEvents: 'none' }}
             />
             <span>{editMode ? '✎ EDIT MODE ON' : isAuthenticated ? '✎ Edit Mode' : '🔒 Edit Mode'}</span>
           </label>
