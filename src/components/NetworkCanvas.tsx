@@ -165,6 +165,13 @@ export function NetworkCanvas() {
           const ltype = window.confirm('Fibre link?\nOK = Fibre\nCancel = Wireless')
             ? ('fibre' as const)
             : ('wireless' as const);
+          const layers: Layer[] = ['existing', 'verse', 'scl', 'remove', 'future'];
+          const layerChoice = window.prompt(
+            'Layer:\n1 = Existing/Current\n2 = Verse IT Remediation\n3 = SCL Enhancement\n4 = Remove/Replace\n5 = Future/Optional',
+            '2'
+          );
+          const layerIdx = layerChoice ? parseInt(layerChoice) - 1 : 1;
+          const layer = layers[layerIdx] || 'verse';
           const id = 'link-' + Date.now().toString(36);
           dispatch({
             type: 'ADD_LINK',
@@ -172,7 +179,7 @@ export function NetworkCanvas() {
               id,
               from: linkingFrom,
               to: loc.id,
-              layer: 'verse' as const,
+              layer,
               type: ltype,
               label: ltype === 'fibre' ? 'Fibre' : 'Wireless',
             },

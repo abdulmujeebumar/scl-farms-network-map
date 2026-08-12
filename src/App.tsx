@@ -28,11 +28,13 @@ function CostSummary({
   editMode,
   dispatch,
   onExportCSV,
+  onExportPDF,
 }: {
   equipment: Equipment[];
   editMode: boolean;
   dispatch: ReturnType<typeof useFarmMap>['dispatch'];
   onExportCSV: () => void;
+  onExportPDF: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -120,7 +122,7 @@ function CostSummary({
           )}
           <div className="cost-summary__actions">
             <button className="cost-summary__btn" onClick={onExportCSV}>📊 Export CSV</button>
-            <button className="cost-summary__btn" onClick={() => window.print()}>📄 Export PDF</button>
+            <button className="cost-summary__btn" onClick={onExportPDF}>📄 Export PDF</button>
           </div>
         </div>
       )}
@@ -172,8 +174,28 @@ function AppLayout() {
   }, []);
 
   const handleExportPDF = useCallback(() => {
-    window.print();
-  }, []);
+    const sclItems = equipment.filter((e) => e.layer === 'scl');
+    const rows = sclItems.map((eq) => {
+      const total = eq.unitCost ? (eq.quantity * eq.unitCost).toLocaleString() : 'TBD';
+      return `<tr>
+        <td>${eq.locationId}</td>
+        <td>${eq.manufacturer || ''} ${eq.model || ''}</td>
+        <td>${eq.quantity}</td>
+        <td>${eq.unitCost ? '₦' + eq.unitCost.toLocaleString() : 'TBD'}</td>
+        <td style="font-weight:700">${total === 'TBD' ? 'TBD' : '₦' + total}</td>
+      </tr>`;
+    }).join('');
+    const grandTotal = sclItems.reduce((s, eq) => s + (eq.unitCost ? eq.quantity * eq.unitCost : 0), 0);
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>SCL Farms - Costing</title>
+    <style>body{font-family:sans-serif;padding:20px;color:#212529}h1{font-size:18px;margin-bottom:4px}h2{font-size:13px;color:#868E96;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #DEE2E6;padding:6px 10px;text-align:left}th{background:#F8F9FA;font-weight:700}.total{font-size:14px;font-weight:700;margin-top:12px}</style></head><body>
+    <h1>SCL Farms — SCL Enhancement Costing</h1><h2>Kwali, Abuja · ${new Date().toLocaleDateString()}</h2>
+    <table><thead><tr><th>Location</th><th>Equipment</th><th>Qty</th><th>Unit Cost</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="total">Grand Total: ${grandTotal > 0 ? '₦' + grandTotal.toLocaleString() : 'TBD'}</p>
+    <p style="font-size:10px;color:#868E96;margin-top:20px">Powered by Koboweb Greentech Group · © KGTG 2026</p>
+    </body></html>`;
+    const w = window.open('', '_blank', 'width=700,height=600');
+    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
+  }, [equipment]);
 
   const handleExportCSV = useCallback(() => {
     const sclItems = equipment.filter((e) => e.layer === 'scl');
@@ -552,7 +574,7 @@ function AppLayout() {
             </div>
           )}
           {/* ---- Cost Summary ---- */}
-          <CostSummary equipment={equipment} editMode={editMode} dispatch={dispatch} onExportCSV={handleExportCSV} />
+          <CostSummary equipment={equipment} editMode={editMode} dispatch={dispatch} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
         </aside>
       </div>
 
