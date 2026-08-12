@@ -129,7 +129,7 @@ function CostSummary({
 
 function AppLayout() {
   const { data, dispatch } = useFarmMap();
-  const { locations, equipment, layerVisibility, linkTypeVisibility, selectedLocationId, editMode } = data;
+  const { locations, equipment, layerVisibility, linkTypeVisibility, selectedLocationId, editMode, isAuthenticated } = data;
 
   const selectedLocation = selectedLocationId
     ? locations.find((l) => l.id === selectedLocationId) || null
@@ -226,10 +226,37 @@ function AppLayout() {
             <input
               type="checkbox"
               checked={editMode}
-              onChange={(e) => dispatch({ type: 'SET_EDIT_MODE', payload: e.target.checked })}
+              onChange={(e) => {
+                const wantEdit = e.target.checked;
+                if (wantEdit && !isAuthenticated) {
+                  const pw = prompt('🔒 Enter admin password to enable Edit Mode:');
+                  if (pw === 'scladmin2026') {
+                    dispatch({ type: 'SET_AUTH', payload: true });
+                    dispatch({ type: 'SET_EDIT_MODE', payload: true });
+                  } else {
+                    alert('Incorrect password.');
+                  }
+                } else if (!wantEdit) {
+                  dispatch({ type: 'SET_EDIT_MODE', payload: false });
+                } else {
+                  dispatch({ type: 'SET_EDIT_MODE', payload: wantEdit });
+                }
+              }}
             />
-            <span>{editMode ? '✎ EDIT MODE ON' : '✎ Edit Mode'}</span>
+            <span>{editMode ? '✎ EDIT MODE ON' : isAuthenticated ? '✎ Edit Mode' : '🔒 Edit Mode'}</span>
           </label>
+          {isAuthenticated && (
+            <button
+              className="edit-toggle"
+              style={{ border: 'none', background: 'transparent', fontSize: 11, cursor: 'pointer', color: 'var(--color-text-muted)' }}
+              onClick={() => {
+                dispatch({ type: 'SET_AUTH', payload: false });
+              }}
+              title="Lock edit mode"
+            >
+              🔓 Lock
+            </button>
+          )}
         </div>
       </header>
 

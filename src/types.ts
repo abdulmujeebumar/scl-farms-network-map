@@ -63,6 +63,7 @@ export interface FarmMapData {
   linkTypeVisibility: { fibre: boolean; ethernet: boolean; wireless: boolean };
   selectedLocationId: string | null;
   editMode: boolean;
+  isAuthenticated: boolean;
 }
 
 // ============================================================

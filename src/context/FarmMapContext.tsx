@@ -20,6 +20,7 @@ type Action =
   | { type: 'TOGGLE_LAYER'; payload: Layer }
   | { type: 'TOGGLE_LINK_TYPE'; payload: 'fibre' | 'ethernet' | 'wireless' }
   | { type: 'SET_EDIT_MODE'; payload: boolean }
+  | { type: 'SET_AUTH'; payload: boolean }
   | { type: 'ADD_EQUIPMENT'; payload: Equipment }
   | { type: 'UPDATE_EQUIPMENT'; payload: Equipment }
   | { type: 'REMOVE_EQUIPMENT'; payload: string }
@@ -112,6 +113,9 @@ function reducer(state: FarmMapData, action: Action): FarmMapData {
 
     case 'SET_EDIT_MODE':
       return { ...state, editMode: action.payload };
+
+    case 'SET_AUTH':
+      return { ...state, isAuthenticated: action.payload, editMode: action.payload ? state.editMode : false };
 
     case 'RESET_DATA':
       return { ...initialData, layerVisibility: { ...initialData.layerVisibility } };

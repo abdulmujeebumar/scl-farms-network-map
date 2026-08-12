@@ -734,4 +734,5 @@ export const initialData: FarmMapData = {
   linkTypeVisibility: { ...DEFAULT_LINK_TYPE_VISIBILITY },
   selectedLocationId: null,
   editMode: false,
+  isAuthenticated: false,
 };
