@@ -1,53 +1,34 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import type { FarmMapData } from './types';
-import { initialData } from './data/initialData';
 
-// ============================================================
-// Firebase config — replace with your own from Firebase Console
-// ============================================================
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT.appspot.com',
-  messagingSenderId: '000000000000',
-  appId: 'YOUR_APP_ID',
+  apiKey: "AIzaSyAHI95sN1B1hZ7sH6LLgMkY9R3wDyX9n3s",
+  authDomain: "scl-farms-map.firebaseapp.com",
+  projectId: "scl-farms-map",
+  storageBucket: "scl-farms-map.firebasestorage.app",
+  messagingSenderId: "570523982619",
+  appId: "1:570523982619:web:8d99339b878edc2943d1be"
 };
 
 const DOC_ID = 'scl-farms-map-data';
 
-let db: ReturnType<typeof getFirestore> | null = null;
-
-function getDb() {
-  if (!db) {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-  }
-  return db;
-}
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 /** Save current data to Firestore */
 export async function saveToCloud(data: FarmMapData): Promise<void> {
   try {
-    const firestore = getDb();
-    await setDoc(doc(firestore, 'map-data', DOC_ID), data);
-  } catch {
-    // Silently fail — localStorage is the fallback
-  }
+    await setDoc(doc(db, 'map-data', DOC_ID), data);
+  } catch { /* localStorage fallback */ }
 }
 
 /** Load data from Firestore, or return null if unavailable */
 export async function loadFromCloud(): Promise<FarmMapData | null> {
   try {
-    const firestore = getDb();
-    const snap = await getDoc(doc(firestore, 'map-data', DOC_ID));
-    if (snap.exists()) {
-      return snap.data() as FarmMapData;
-    }
-  } catch {
-    // Silently fail
-  }
+    const snap = await getDoc(doc(db, 'map-data', DOC_ID));
+    if (snap.exists()) return snap.data() as FarmMapData;
+  } catch { /* offline fallback */ }
   return null;
 }
 
@@ -55,14 +36,7 @@ export async function loadFromCloud(): Promise<FarmMapData | null> {
 export function subscribeToCloud(
   callback: (data: FarmMapData) => void,
 ): () => void {
-  try {
-    const firestore = getDb();
-    return onSnapshot(doc(firestore, 'map-data', DOC_ID), (snap) => {
-      if (snap.exists()) {
-        callback(snap.data() as FarmMapData);
-      }
-    });
-  } catch {
-    return () => {};
-  }
+  return onSnapshot(doc(db, 'map-data', DOC_ID), (snap) => {
+    if (snap.exists()) callback(snap.data() as FarmMapData);
+  });
 }
