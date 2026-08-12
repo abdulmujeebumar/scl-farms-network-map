@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { FarmMapProvider, useFarmMap } from './context/FarmMapContext';
 import { MapView } from './components/MapView';
 import { LAYER_COLORS, LAYER_LABELS, LINK_TYPE_LABELS, LINK_TYPE_COLORS } from './types';
@@ -26,10 +26,12 @@ function CostSummary({
   equipment,
   editMode,
   dispatch,
+  onExportCSV,
 }: {
   equipment: Equipment[];
   editMode: boolean;
   dispatch: ReturnType<typeof useFarmMap>['dispatch'];
+  onExportCSV: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -114,6 +116,10 @@ function CostSummary({
           {layerOrder.every((l) => !grouped[l]) && (
             <p className="cost-summary__empty">No cost data available.</p>
           )}
+          <div className="cost-summary__actions">
+            <button className="cost-summary__btn" onClick={onExportCSV}>📊 Export CSV</button>
+            <button className="cost-summary__btn" onClick={() => window.print()}>📄 Export PDF</button>
+          </div>
         </div>
       )}
     </div>
@@ -167,6 +173,41 @@ function AppLayout() {
     window.print();
   }, []);
 
+  const handleExportCSV = useCallback(() => {
+    const sclItems = equipment.filter((e) => e.layer === 'scl');
+    const header = 'Layer,Location,Manufacturer,Model,Quantity,Unit Cost (₦),Total (₦),Status';
+    const rows = sclItems.map((eq) => {
+      const total = eq.unitCost ? eq.quantity * eq.unitCost : 'TBD';
+      return `"${LAYER_LABELS[eq.layer]}","${eq.locationId}","${eq.manufacturer || ''}","${eq.model || ''}",${eq.quantity},${eq.unitCost ?? 'TBD'},${total},"${eq.status || ''}"`;
+    });
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.download = 'scl-farms-costing.csv';
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, [equipment]);
+
+  // Sidebar resize
+  const [sidebarWidth, setSidebarWidth] = useState(280);
+  const resizing = useRef(false);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizing.current = true;
+    const startX = e.clientX;
+    const startW = sidebarWidth;
+    const onMove = (ev: MouseEvent) => {
+      if (!resizing.current) return;
+      const delta = startX - ev.clientX;
+      setSidebarWidth(Math.max(200, Math.min(500, startW + delta)));
+    };
+    const onUp = () => { resizing.current = false; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [sidebarWidth]);
+
   return (
     <div className="app">
       {/* ---- Header ---- */}
@@ -198,8 +239,11 @@ function AppLayout() {
           <MapView />
         </div>
 
+        {/* Resize handle */}
+        <div className="app-resize-handle" onMouseDown={handleResizeStart} />
+
         {/* ---- Legend sidebar ---- */}
-        <aside className="app-legend">
+        <aside className="app-legend" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
           <h3 className="legend-title">Legend</h3>
           {(Object.keys(LAYER_COLORS) as Layer[]).map((layer) => (
             <label
@@ -406,7 +450,7 @@ function AppLayout() {
             </div>
           )}
           {/* ---- Cost Summary ---- */}
-          <CostSummary equipment={equipment} editMode={editMode} dispatch={dispatch} />
+          <CostSummary equipment={equipment} editMode={editMode} dispatch={dispatch} onExportCSV={handleExportCSV} />
         </aside>
       </div>
 
