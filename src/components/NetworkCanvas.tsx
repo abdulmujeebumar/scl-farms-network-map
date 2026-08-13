@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useFarmMap } from '../context/FarmMapContext';
-import { LAYER_COLORS, LAYER_LABELS, getLocationColor } from '../types';
+import { LAYER_COLORS, LAYER_LABELS, LINK_TYPE_COLORS, LINK_TYPE_LABELS, getLocationColor } from '../types';
 import type { Location, Layer, Link } from '../types';
 import './NetworkCanvas.css';
 
@@ -36,6 +36,11 @@ export function NetworkCanvas() {
   const [linkMode, setLinkMode] = useState(false);
   const [linkingFrom, setLinkingFrom] = useState<string | null>(null);
   const [linkCursor, setLinkCursor] = useState({ gx: 0, gy: 0 });
+
+  // Link-properties modal state
+  const [pendingLink, setPendingLink] = useState<{ from: string; to: string } | null>(null);
+  const [draftType, setDraftType] = useState<'fibre' | 'ethernet' | 'wireless'>('fibre');
+  const [draftLayer, setDraftLayer] = useState<Layer>('verse');
 
   // ---- Helpers ----
   const svgToGrid = useCallback(
@@ -74,15 +79,18 @@ export function NetworkCanvas() {
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
-      // Cancel linking on background click
+      const target = e.target as Element;
+      const isNode = !!target.closest('.nc-node');
+      // Cancel linking only when clicking the background (not a node)
       if (linkMode) {
-        setLinkMode(false);
-        setLinkingFrom(null);
+        if (!isNode) {
+          setLinkMode(false);
+          setLinkingFrom(null);
+        }
         return;
       }
       // Only pan if not dragging a node
-      const target = e.target as Element;
-      if (target.closest('.nc-node')) return;
+      if (isNode) return;
       setPanning(true);
       panStart.current = {
         mx: e.clientX,
@@ -143,13 +151,13 @@ export function NetworkCanvas() {
   // ---- Node drag start ----
   const handleNodeMouseDown = useCallback(
     (e: React.MouseEvent, loc: Location) => {
-      if (!editMode) return;
+      if (!editMode || linkMode) return;
       // Don't stopPropagation — it blocks onClick in some browsers
       const { gx, gy } = svgToGrid(e.clientX, e.clientY);
       setDragNodeId(loc.id);
       dragOffset.current = { dx: gx - loc.x, dy: gy - loc.y };
     },
-    [editMode, svgToGrid],
+    [editMode, linkMode, svgToGrid],
   );
 
   // ---- Node click ----
@@ -161,31 +169,12 @@ export function NetworkCanvas() {
           // First click: set source
           setLinkingFrom(loc.id);
         } else if (linkingFrom !== loc.id) {
-          // Second click: complete link
-          const ltype = window.confirm('Fibre link?\nOK = Fibre\nCancel = Wireless')
-            ? ('fibre' as const)
-            : ('wireless' as const);
-          const layers: Layer[] = ['existing', 'verse', 'scl', 'remove', 'future'];
-          const layerChoice = window.prompt(
-            'Layer:\n1 = Existing/Current\n2 = Verse IT Remediation\n3 = SCL Enhancement\n4 = Remove/Replace\n5 = Future/Optional',
-            '2'
-          );
-          const layerIdx = layerChoice ? parseInt(layerChoice) - 1 : 1;
-          const layer = layers[layerIdx] || 'verse';
-          const id = 'link-' + Date.now().toString(36);
-          dispatch({
-            type: 'ADD_LINK',
-            payload: {
-              id,
-              from: linkingFrom,
-              to: loc.id,
-              layer,
-              type: ltype,
-              label: ltype === 'fibre' ? 'Fibre' : 'Wireless',
-            },
-          });
-          setLinkingFrom(null);
+          // Second click: open link-properties dialog
+          setPendingLink({ from: linkingFrom, to: loc.id });
+          setDraftType('fibre');
+          setDraftLayer('verse');
           setLinkMode(false);
+          setLinkingFrom(null);
         }
         return;
       }
@@ -209,6 +198,23 @@ export function NetworkCanvas() {
     setLinkMode(false);
     setLinkingFrom(null);
   }, []);
+
+  const confirmLink = useCallback(() => {
+    if (!pendingLink) return;
+    const id = 'link-' + Date.now().toString(36);
+    dispatch({
+      type: 'ADD_LINK',
+      payload: {
+        id,
+        from: pendingLink.from,
+        to: pendingLink.to,
+        layer: draftLayer,
+        type: draftType,
+        label: draftType === 'fibre' ? 'Fibre' : draftType === 'ethernet' ? 'Ethernet' : 'Wireless',
+      },
+    });
+    setPendingLink(null);
+  }, [pendingLink, draftLayer, draftType, dispatch]);
 
   // Escape key to cancel linking
   useEffect(() => {
@@ -307,7 +313,7 @@ export function NetworkCanvas() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        style={{ cursor: panning ? 'grabbing' : dragNodeId ? 'grabbing' : 'grab' }}
+        style={{ cursor: linkMode ? 'crosshair' : panning ? 'grabbing' : dragNodeId ? 'grabbing' : 'grab' }}
       >
         <defs>
           {/* Grid patterns */}
@@ -652,6 +658,64 @@ export function NetworkCanvas() {
           rx="4"
         />
       </svg>
+
+      {/* ---- Link properties modal ---- */}
+      {pendingLink && (
+        <div className="nc-link-modal-overlay" onClick={() => setPendingLink(null)}>
+          <div className="nc-link-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>🔗 Add Link</h3>
+            <p className="nc-link-modal__sub">
+              {locationMap.get(pendingLink.from)?.name || 'Source'} →{' '}
+              {locationMap.get(pendingLink.to)?.name || 'Target'}
+            </p>
+
+            <div className="nc-link-modal__field">
+              <label className="nc-link-modal__label">Link type</label>
+              <div className="nc-link-modal__options">
+                {(['fibre', 'ethernet', 'wireless'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`nc-link-modal__opt ${draftType === t ? 'nc-link-modal__opt--active' : ''}`}
+                    style={draftType === t ? { borderColor: LINK_TYPE_COLORS[t], boxShadow: `0 0 0 1px ${LINK_TYPE_COLORS[t]}` } : undefined}
+                    onClick={() => setDraftType(t)}
+                  >
+                    <span className="nc-link-modal__opt-dot" style={{ background: LINK_TYPE_COLORS[t] }} />
+                    {LINK_TYPE_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="nc-link-modal__field">
+              <label className="nc-link-modal__label">Layer</label>
+              <div className="nc-link-modal__options">
+                {(['existing', 'verse', 'scl', 'remove', 'future'] as Layer[]).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    className={`nc-link-modal__opt ${draftLayer === l ? 'nc-link-modal__opt--active' : ''}`}
+                    style={draftLayer === l ? { borderColor: LAYER_COLORS[l], boxShadow: `0 0 0 1px ${LAYER_COLORS[l]}` } : undefined}
+                    onClick={() => setDraftLayer(l)}
+                  >
+                    <span className="nc-link-modal__opt-dot" style={{ background: LAYER_COLORS[l] }} />
+                    {LAYER_LABELS[l]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="nc-link-modal__actions">
+              <button type="button" className="nc-link-modal__btn" onClick={() => setPendingLink(null)}>
+                Cancel
+              </button>
+              <button type="button" className="nc-link-modal__btn nc-link-modal__btn--primary" onClick={confirmLink}>
+                Add Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
