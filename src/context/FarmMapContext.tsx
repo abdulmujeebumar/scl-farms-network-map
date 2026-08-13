@@ -26,6 +26,7 @@ type Action =
   | { type: 'UPDATE_EQUIPMENT'; payload: Equipment }
   | { type: 'REMOVE_EQUIPMENT'; payload: string }
   | { type: 'ADD_LINK'; payload: Link }
+  | { type: 'UPDATE_LINK'; payload: Link }
   | { type: 'REMOVE_LINK'; payload: string }
   | { type: 'RESET_DATA' };
 
@@ -48,8 +49,23 @@ function reducer(state: FarmMapData, action: Action): FarmMapData {
       return { ...state, locations: updated };
     }
 
-    case 'ADD_LOCATION':
-      return { ...state, locations: [...state.locations, action.payload] };
+    case 'ADD_LOCATION': {
+      const loc = action.payload;
+      const links = loc.parentId
+        ? [
+            ...state.links,
+            {
+              id: `link-${loc.parentId}-${loc.id}`,
+              from: loc.parentId,
+              to: loc.id,
+              layer: 'scl' as const,
+              type: 'ethernet' as const,
+              label: 'Ethernet',
+            },
+          ]
+        : state.links;
+      return { ...state, locations: [...state.locations, loc], links };
+    }
 
     case 'REMOVE_LOCATION':
       return {
@@ -84,6 +100,14 @@ function reducer(state: FarmMapData, action: Action): FarmMapData {
 
     case 'ADD_LINK':
       return { ...state, links: [...state.links, action.payload] };
+
+    case 'UPDATE_LINK': {
+      const idx = state.links.findIndex((l) => l.id === action.payload.id);
+      if (idx === -1) return state;
+      const updated = [...state.links];
+      updated[idx] = action.payload;
+      return { ...state, links: updated };
+    }
 
     case 'REMOVE_LINK':
       return {
@@ -156,6 +180,32 @@ interface FarmMapContextValue {
 
 const FarmMapContext = createContext<FarmMapContextValue | null>(null);
 
+/**
+ * Guarantee that every sub-location has an Ethernet link back to its parent.
+ * Existing links are preserved; only missing parent links are added.
+ */
+function ensureSubLocationLinks(data: FarmMapData): FarmMapData {
+  const existing = new Set(data.links.map((l) => `${l.from}->${l.to}`));
+  let added = false;
+  const links = [...data.links];
+  data.locations.forEach((loc) => {
+    if (!loc.parentId) return;
+    const key = `${loc.parentId}->${loc.id}`;
+    if (existing.has(key)) return;
+    existing.add(key);
+    links.push({
+      id: `link-${loc.parentId}-${loc.id}`,
+      from: loc.parentId,
+      to: loc.id,
+      layer: 'scl',
+      type: 'ethernet',
+      label: 'Ethernet',
+    });
+    added = true;
+  });
+  return added ? { ...data, links } : data;
+}
+
 function loadPersistedState(): FarmMapData | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -166,7 +216,7 @@ function loadPersistedState(): FarmMapData | null {
       if (!parsed.linkTypeVisibility) {
         parsed.linkTypeVisibility = { fibre: true, ethernet: true, wireless: true };
       }
-      return parsed as FarmMapData;
+      return ensureSubLocationLinks(parsed as FarmMapData);
     }
   } catch {
     console.warn('Could not restore persisted state; using initial data.');
@@ -195,7 +245,7 @@ export function FarmMapProvider({ children }: { children: React.ReactNode }) {
     loadFromCloud().then((cloudData) => {
       if (cloudData) {
         isCloudUpdate.current = true;
-        dispatch({ type: 'SET_DATA', payload: cloudData });
+        dispatch({ type: 'SET_DATA', payload: ensureSubLocationLinks(cloudData) });
       }
       setCloudReady(true);
     });

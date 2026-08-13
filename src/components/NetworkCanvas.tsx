@@ -38,7 +38,7 @@ export function NetworkCanvas() {
   const [linkCursor, setLinkCursor] = useState({ gx: 0, gy: 0 });
 
   // Link-properties modal state
-  const [pendingLink, setPendingLink] = useState<{ from: string; to: string } | null>(null);
+  const [pendingLink, setPendingLink] = useState<{ id?: string; from: string; to: string } | null>(null);
   const [draftType, setDraftType] = useState<'fibre' | 'ethernet' | 'wireless'>('fibre');
   const [draftLayer, setDraftLayer] = useState<Layer>('verse');
 
@@ -170,23 +170,25 @@ export function NetworkCanvas() {
           setLinkingFrom(loc.id);
         } else if (linkingFrom !== loc.id) {
           // Second click: open link-properties dialog
+          const fromLoc = locations.find((l) => l.id === linkingFrom);
+          const isParentChild =
+            (fromLoc?.parentId === loc.id) || (loc.parentId === fromLoc?.id);
           setPendingLink({ from: linkingFrom, to: loc.id });
-          setDraftType('fibre');
-          setDraftLayer('verse');
+          setDraftType(isParentChild ? 'ethernet' : 'fibre');
+          setDraftLayer(isParentChild ? 'scl' : 'verse');
           setLinkMode(false);
           setLinkingFrom(null);
         }
         return;
       }
-      // Toggle collapse: only for locations that have children (e.g. Cedarwood)
-      const hasChildren = locations.some((l) => l.parentId === loc.id);
-      if (hasChildren && selectedLocationId === loc.id) {
+      // Toggle: clicking the selected location again collapses it
+      if (selectedLocationId === loc.id) {
         dispatch({ type: 'SELECT_LOCATION', payload: null });
         return;
       }
       dispatch({ type: 'SELECT_LOCATION', payload: loc.id });
     },
-    [dispatch, linkMode, linkingFrom],
+    [dispatch, linkMode, linkingFrom, selectedLocationId, locations],
   );
 
   const enterLinkMode = useCallback(() => {
@@ -199,22 +201,45 @@ export function NetworkCanvas() {
     setLinkingFrom(null);
   }, []);
 
+  const openEditLink = useCallback((link: Link) => {
+    setPendingLink({ id: link.id, from: link.from, to: link.to });
+    setDraftType(link.type);
+    setDraftLayer(link.layer);
+  }, []);
+
   const confirmLink = useCallback(() => {
     if (!pendingLink) return;
-    const id = 'link-' + Date.now().toString(36);
-    dispatch({
-      type: 'ADD_LINK',
-      payload: {
-        id,
-        from: pendingLink.from,
-        to: pendingLink.to,
-        layer: draftLayer,
-        type: draftType,
-        label: draftType === 'fibre' ? 'Fibre' : draftType === 'ethernet' ? 'Ethernet' : 'Wireless',
-      },
-    });
+    const label = draftType === 'fibre' ? 'Fibre' : draftType === 'ethernet' ? 'Ethernet' : 'Wireless';
+    if (pendingLink.id) {
+      const existing = links.find((l) => l.id === pendingLink.id);
+      dispatch({
+        type: 'UPDATE_LINK',
+        payload: {
+          id: pendingLink.id,
+          from: pendingLink.from,
+          to: pendingLink.to,
+          layer: draftLayer,
+          type: draftType,
+          label,
+          notes: existing?.notes,
+        },
+      });
+    } else {
+      const id = 'link-' + Date.now().toString(36);
+      dispatch({
+        type: 'ADD_LINK',
+        payload: {
+          id,
+          from: pendingLink.from,
+          to: pendingLink.to,
+          layer: draftLayer,
+          type: draftType,
+          label,
+        },
+      });
+    }
     setPendingLink(null);
-  }, [pendingLink, draftLayer, draftType, dispatch]);
+  }, [pendingLink, draftLayer, draftType, links, dispatch]);
 
   // Escape key to cancel linking
   useEffect(() => {
@@ -238,9 +263,9 @@ export function NetworkCanvas() {
   // Active parent: if a sub-location is selected, use its parent; otherwise use selectedLocationId
   const selectedLoc = locations.find((l) => l.id === selectedLocationId);
   const activeParentId = selectedLoc?.parentId || selectedLocationId;
-  // Sub-locations: only visible when parent is active
+  // Sub-locations: visible when parent is active, or always while linking
   const subLocs = locations.filter(
-    (l) => l.parentId && l.parentId === activeParentId
+    (l) => l.parentId && (linkMode || l.parentId === activeParentId)
   );
 
   return (
@@ -371,15 +396,19 @@ export function NetworkCanvas() {
           const from = locationMap.get(link.from);
           const to = locationMap.get(link.to);
           if (!from || !to) return null;
+
+          const fromLoc = locationMap.get(link.from);
+          const toLoc = locationMap.get(link.to);
+
           if (!layerVisibility[link.layer]) return null;
           // Link type filter only applies to non-existing links; existing links controlled by layer toggle alone
           if (link.layer !== 'existing' && !linkTypeVisibility[link.type]) return null;
 
-          // Hide links to/from sub-locations unless parent is active
-          const fromLoc = locationMap.get(link.from);
-          const toLoc = locationMap.get(link.to);
-          if (fromLoc?.parentId && fromLoc.parentId !== activeParentId) return null;
-          if (toLoc?.parentId && toLoc.parentId !== activeParentId) return null;
+          // Hide links to/from sub-locations unless parent is active (or while linking)
+          if (!linkMode) {
+            if (fromLoc?.parentId && fromLoc.parentId !== activeParentId) return null;
+            if (toLoc?.parentId && toLoc.parentId !== activeParentId) return null;
+          }
 
           const linkColor = LAYER_COLORS[link.layer];
           const midX = (from.x + to.x) / 2;
@@ -433,6 +462,19 @@ export function NetworkCanvas() {
               >
                 {isEthernet ? 'ETHERNET' : isWireless ? 'WIRELESS' : 'FIBRE'}
               </text>
+              {/* Edit button in edit mode */}
+              {editMode && (
+                <g
+                  style={{ cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditLink(link);
+                  }}
+                >
+                  <circle cx={midX + 38} cy={midY - 12} r="8" fill="#3B82F6" opacity="0.9" />
+                  <text x={midX + 38} y={midY - 9} textAnchor="middle" fill="white" fontSize="10" fontWeight="700">✎</text>
+                </g>
+              )}
               {/* Delete button in edit mode */}
               {editMode && (
                 <g
@@ -555,18 +597,25 @@ export function NetworkCanvas() {
           const isSelected = selectedLocationId === loc.id;
           const color = getLocationColor(loc.id);
           const parent = loc.parentId ? locationMap.get(loc.parentId) : null;
+          const hasVisibleParentLink = !!loc.parentId && links.some(
+            (l) =>
+              ((l.from === loc.parentId && l.to === loc.id) ||
+                (l.from === loc.id && l.to === loc.parentId)) &&
+              layerVisibility[l.layer] &&
+              (l.layer === 'existing' || linkTypeVisibility[l.type])
+          );
 
           return (
             <g key={loc.id}>
-              {/* Dashed connector to parent */}
-              {parent && (
+              {/* Structural parent relationship (grey dashed) when no layer link is visible */}
+              {parent && !hasVisibleParentLink && (
                 <line
                   x1={parent.x} y1={parent.y + 20}
                   x2={loc.x} y2={loc.y - 12}
-                  stroke="#CED4DA"
-                  strokeWidth="1"
+                  stroke="#9CA3AF"
+                  strokeWidth="1.5"
                   strokeDasharray="4 4"
-                  opacity="0.6"
+                  opacity="0.7"
                 />
               )}
 
@@ -663,7 +712,7 @@ export function NetworkCanvas() {
       {pendingLink && (
         <div className="nc-link-modal-overlay" onClick={() => setPendingLink(null)}>
           <div className="nc-link-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>🔗 Add Link</h3>
+            <h3>{pendingLink.id ? '✎ Edit Link' : '🔗 Add Link'}</h3>
             <p className="nc-link-modal__sub">
               {locationMap.get(pendingLink.from)?.name || 'Source'} →{' '}
               {locationMap.get(pendingLink.to)?.name || 'Target'}
@@ -710,7 +759,7 @@ export function NetworkCanvas() {
                 Cancel
               </button>
               <button type="button" className="nc-link-modal__btn nc-link-modal__btn--primary" onClick={confirmLink}>
-                Add Link
+                {pendingLink.id ? 'Save Changes' : 'Add Link'}
               </button>
             </div>
           </div>
